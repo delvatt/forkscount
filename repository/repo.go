@@ -43,7 +43,11 @@ func (ir *inMemoryRepository) Fetch(ctx context.Context, n int) ([]Project, erro
 	repoChan := make(chan []Project)
 
 	go func() {
-		repoChan <- ir.fakeProjects
+		if n > len(ir.fakeProjects) {
+			n = len(ir.fakeProjects)
+		}
+
+		repoChan <- ir.fakeProjects[:n]
 	}()
 
 	var err error
@@ -54,6 +58,7 @@ func (ir *inMemoryRepository) Fetch(ctx context.Context, n int) ([]Project, erro
 		err = ctx.Err()
 	case latestProjects = <-repoChan:
 	}
+
 	return latestProjects, err
 }
 
