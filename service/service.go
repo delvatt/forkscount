@@ -8,12 +8,12 @@ import (
 	"github.com/delvatt/forkscount/repository"
 )
 
-type apiResponse struct {
+type ApiResponse struct {
 	Names    string `json:"projectNames"`
 	ForksSum int    `json:"forksSum"`
 }
 
-func GetLatestProject(repo repository.Repository, n int) apiResponse {
+func GetLatestProject(repo repository.Repository, n int) ApiResponse {
 	ctx := context.Background()
 	projects, err := repo.Fetch(ctx, n)
 	if err != nil {
@@ -27,7 +27,7 @@ func GetLatestProject(repo repository.Repository, n int) apiResponse {
 		sum += project.ForksCount
 	}
 
-	return apiResponse{
+	return ApiResponse{
 		Names:    strings.Join(names, ","),
 		ForksSum: sum}
 }
