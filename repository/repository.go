@@ -21,22 +21,8 @@ type inMemoryRepository struct {
 	fakeProjects []Project
 }
 
-func NewInMemoryRepository() *inMemoryRepository {
-	ir := inMemoryRepository{}
-	ir.fakeProjects = []Project{
-		{Name: "Boner project", ForksCount: 0},
-		{Name: "grup", ForksCount: 0},
-		{Name: "easy", ForksCount: 2},
-		{Name: "slothbeast", ForksCount: 4},
-		{Name: "sspssptest", ForksCount: 0},
-		{Name: "hcs_utils", ForksCount: 1},
-		{Name: "K", ForksCount: 1},
-		{Name: "Heroes of Wesnoth", ForksCount: 5},
-		{Name: "Leiningen", ForksCount: 1},
-		{Name: "TearDownWalls", ForksCount: 5},
-	}
-
-	return &ir
+func NewInMemoryRepository(projects []Project) *inMemoryRepository {
+	return &inMemoryRepository{projects}
 }
 
 func (ir *inMemoryRepository) Fetch(ctx context.Context, n int) ([]Project, error) {
@@ -80,7 +66,7 @@ func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error)
 	}
 
 	query := `
-	query last_projects($n: Int = 5) {
+	query last_projects($n: Int) {
 	projects(last: $n) {
 	nodes {
 	name
