@@ -21,7 +21,22 @@ type inMemoryRepository struct {
 	fakeProjects []Project
 }
 
-func NewInMemoryRepository(projects []Project) *inMemoryRepository {
+func NewInMemoryRepository(projects ...Project) *inMemoryRepository {
+	if len(projects) == 0 {
+		projects = []Project{
+			{Name: "Boner project", ForksCount: 0},
+			{Name: "grup", ForksCount: 0},
+			{Name: "easy", ForksCount: 2},
+			{Name: "slothbeast", ForksCount: 4},
+			{Name: "sspssptest", ForksCount: 0},
+			{Name: "hcs_utils", ForksCount: 1},
+			{Name: "K", ForksCount: 1},
+			{Name: "Heroes of Wesnoth", ForksCount: 5},
+			{Name: "Leiningen", ForksCount: 1},
+			{Name: "TearDownWalls", ForksCount: 5},
+		}
+	}
+
 	return &inMemoryRepository{projects}
 }
 

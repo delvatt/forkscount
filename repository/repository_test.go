@@ -23,7 +23,7 @@ var fakeProjects = []repository.Project{
 }
 
 func TestFetch(t *testing.T) {
-	repo := repository.NewInMemoryRepository(fakeProjects)
+	repo := repository.NewInMemoryRepository()
 
 	projects, err := repo.Fetch(context.Background(), 100)
 	if err != nil {
@@ -36,7 +36,7 @@ func TestFetch(t *testing.T) {
 }
 
 func TestFetchWithLimit(t *testing.T) {
-	repo := repository.NewInMemoryRepository(fakeProjects)
+	repo := repository.NewInMemoryRepository()
 	want := fakeProjects[:5]
 
 	projects, err := repo.Fetch(context.Background(), 5)
@@ -50,7 +50,7 @@ func TestFetchWithLimit(t *testing.T) {
 }
 
 func TestFetchWithTimeout(t *testing.T) {
-	repo := repository.NewInMemoryRepository(fakeProjects)
+	repo := repository.NewInMemoryRepository()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Nanosecond)
 	defer cancel()
