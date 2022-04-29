@@ -10,11 +10,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/delvatt/forkscount/service"
 )
 
-func run(url string, lastCount int) (*bytes.Buffer, error) {
+func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
@@ -23,6 +24,13 @@ func run(url string, lastCount int) (*bytes.Buffer, error) {
 	q := req.URL.Query()
 	q.Add("n", fmt.Sprintf("%d", lastCount))
 	req.URL.RawQuery = q.Encode()
+
+	if timeout > 0 {
+		ctx, cancel := context.WithTimeout(req.Context(), time.Duration(timeout*100)*time.Millisecond)
+		defer cancel()
+
+		req = req.WithContext(ctx)
+	}
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
@@ -47,6 +55,7 @@ func run(url string, lastCount int) (*bytes.Buffer, error) {
 
 func main() {
 	lastCount := flag.Int("n", 5, "Number of repository projects to fetch.")
+	timeout := flag.Int("t", 0, "time (in Milliseconds) to wait before the request times out.")
 	flag.Parse()
 
 	service := service.NewService(":9000")
@@ -62,7 +71,7 @@ func main() {
 		}
 	}()
 
-	results, err := run(fmt.Sprintf("http://localhost%s", service.Addr), *lastCount)
+	results, err := run(fmt.Sprintf("http://localhost%s", service.Addr), *lastCount, *timeout)
 	if err != nil {
 		log.Println(err)
 	}

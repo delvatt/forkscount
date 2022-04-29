@@ -19,8 +19,7 @@ type ApiResponse struct {
 	ForksSum int    `json:"forksSum"`
 }
 
-func GetLatestProject(repo repository.Repository, lastCount int) ApiResponse {
-	ctx := context.Background()
+func GetLatestProject(ctx context.Context, repo repository.Repository, lastCount int) ApiResponse {
 	projects, err := repo.Fetch(ctx, lastCount)
 	if err != nil {
 		log.Fatal(err)
@@ -40,7 +39,7 @@ func GetLatestProject(repo repository.Repository, lastCount int) ApiResponse {
 
 func GetLatestProjectJSONHandler(w http.ResponseWriter, r *http.Request) {
 	repo, lastCount := preProcessRequest(r)
-	jsonData, err := json.Marshal(GetLatestProject(repo, lastCount))
+	jsonData, err := json.Marshal(GetLatestProject(r.Context(), repo, lastCount))
 	if err != nil {
 		log.Fatal(err)
 	}

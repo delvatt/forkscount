@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,7 +23,7 @@ func TestServiceCore(t *testing.T) {
 		Names:    "hcs_utils,K,Heroes of Wesnoth,Leiningen,TearDownWalls",
 		ForksSum: 13,
 	}
-	got := service.GetLatestProject(repository.NewInMemoryRepository(fakeProjects...), 5)
+	got := service.GetLatestProject(context.Background(), repository.NewInMemoryRepository(fakeProjects...), 5)
 
 	if want != got {
 		t.Errorf("expected %v, but got %v", want, got)
@@ -66,7 +67,6 @@ func TestServiceHandler(t *testing.T) {
 			if jsonString != test.expected {
 				t.Errorf("expected %s, but got %s", test.expected, jsonString)
 			}
-
 		})
 	}
 }
