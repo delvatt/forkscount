@@ -31,17 +31,32 @@ func TestServiceCore(t *testing.T) {
 
 func TestServiceHandler(t *testing.T) {
 	var server http.HandlerFunc
+	server = service.GetLatestProjectJSONHandler
 
-	fakeRequest := httptest.NewRequest(http.MethodGet, "/", nil)
 	fakeResponse := httptest.NewRecorder()
 
-	server = service.GetLatestProjectJSONHandler
-	server.ServeHTTP(fakeResponse, fakeRequest)
+	tests := []struct {
+		name        string
+		fakeRequest *http.Request
+		expected    string
+	}{
+		{
+			name:        "WithNoLimit",
+			fakeRequest: httptest.NewRequest(http.MethodGet, "/", nil),
+			expected:    `{"names":"Boner project,grup,easy,slothbeast,sspssptest","forksSum":6}`,
+		},
+	}
 
-	expected := `{"names":"Boner project,grup,easy,slothbeast,sspssptest","forksSum":6}`
-	jsonString := fakeResponse.Body.String()
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 
-	if jsonString != expected {
-		t.Errorf("expected %s, but got %s", expected, jsonString)
+			server.ServeHTTP(fakeResponse, test.fakeRequest)
+
+			jsonString := fakeResponse.Body.String()
+			if jsonString != test.expected {
+				t.Errorf("expected %s, but got %s", test.expected, jsonString)
+			}
+
+		})
 	}
 }
