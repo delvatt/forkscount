@@ -52,7 +52,7 @@ func preProcessRequest(r *http.Request) (repository.Repository, int) {
 	n := r.URL.Query().Get("n")
 
 	lastCount, err := strconv.Atoi(n)
-	if err != nil || lastCount <= 0 {
+	if err != nil || lastCount < 0 {
 		// log that we are falling back on the default value
 		lastCount = defaultCount
 	}

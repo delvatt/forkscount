@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -13,8 +14,18 @@ import (
 	"github.com/delvatt/forkscount/service"
 )
 
-func run(url string) (*bytes.Buffer, error) {
-	resp, err := http.Get(url)
+func run(url string, lastCount int) (*bytes.Buffer, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	q.Add("n", fmt.Sprintf("%d", lastCount))
+	req.URL.RawQuery = q.Encode()
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +46,9 @@ func run(url string) (*bytes.Buffer, error) {
 }
 
 func main() {
+	lastCount := flag.Int("n", 5, "Number of repository projects to fetch.")
+	flag.Parse()
+
 	service := service.NewService(":9000")
 
 	go func() {
@@ -48,7 +62,7 @@ func main() {
 		}
 	}()
 
-	results, err := run(fmt.Sprintf("http://localhost%s", service.Addr))
+	results, err := run(fmt.Sprintf("http://localhost%s", service.Addr), *lastCount)
 	if err != nil {
 		log.Println(err)
 	}
