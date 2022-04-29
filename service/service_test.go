@@ -36,10 +36,9 @@ func TestServiceHandler(t *testing.T) {
 	fakeResponse := httptest.NewRecorder()
 
 	server = service.GetLatestProjectJSONHandler
-
 	server.ServeHTTP(fakeResponse, fakeRequest)
 
-	expected := `{"projectNames":"Boner project,grup,easy,slothbeast,sspssptest","forksSum":6}`
+	expected := `{"names":"Boner project,grup,easy,slothbeast,sspssptest","forksSum":6}`
 	jsonString := fakeResponse.Body.String()
 
 	if jsonString != expected {

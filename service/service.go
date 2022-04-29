@@ -15,7 +15,7 @@ const defaultCount = 5
 const maxCount = 100
 
 type ApiResponse struct {
-	Names    string `json:"projectNames"`
+	Names    string `json:"names"`
 	ForksSum int    `json:"forksSum"`
 }
 
