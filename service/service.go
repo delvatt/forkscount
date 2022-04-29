@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,8 @@ import (
 
 const defaultCount = 5
 const maxCount = 100
+
+const gitlabGraphqlEndpoint = "https://gitlab.com/api/graphql"
 
 type ApiResponse struct {
 	Names    string `json:"names"`
@@ -66,10 +69,19 @@ func preProcessRequest(r *http.Request) int {
 }
 
 func NewService(addr string) *http.Server {
-	http.HandleFunc("/", GetLatestProjectJSONHandler(repository.NewGitlabRepository("https://gitlab.com/api/graphql")))
+	http.HandleFunc("/", GetLatestProjectJSONHandler(repository.NewGitlabRepository(os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR"))))
 
 	return &http.Server{
 		Addr:    addr,
 		Handler: nil,
+	}
+}
+
+func init() {
+	graphqlAddr := os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR")
+	if graphqlAddr == "" {
+		log.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
+		log.Printf("please consider setting %q env var\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR")
+		os.Setenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
 	}
 }

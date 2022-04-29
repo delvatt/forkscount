@@ -15,6 +15,8 @@ import (
 	"github.com/delvatt/forkscount/service"
 )
 
+const defaultServiceAddr = "localhost:9000"
+
 func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -53,12 +55,22 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	return indentData, nil
 }
 
+func init() {
+
+	serviceAddr := os.Getenv("FORKSCOUNT_SERVICE_ADDR")
+	if serviceAddr == "" {
+		log.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
+		log.Printf("you can configure this by setting %q env var\n", "FORKSCOUNT_SERVICE_ADDR")
+		os.Setenv("FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
+	}
+}
+
 func main() {
 	lastCount := flag.Int("n", 5, "Number of repository projects to fetch.")
-	timeout := flag.Int("t", 0, "time (in Milliseconds) to wait before the request times out.")
+	timeout := flag.Int("t", 0, "time (in the 100 Milliseconds) to wait before the request times out.")
 	flag.Parse()
 
-	service := service.NewService(":9000")
+	service := service.NewService(os.Getenv("FORKSCOUNT_SERVICE_ADDR"))
 
 	go func() {
 		log.Printf("starting service on %s\n", service.Addr)
@@ -71,7 +83,7 @@ func main() {
 		}
 	}()
 
-	results, err := run(fmt.Sprintf("http://localhost%s", service.Addr), *lastCount, *timeout)
+	results, err := run(fmt.Sprintf("http://%s", service.Addr), *lastCount, *timeout)
 	if err != nil {
 		log.Println(err)
 	}
