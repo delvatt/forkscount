@@ -37,17 +37,19 @@ func GetLatestProject(ctx context.Context, repo repository.Repository, lastCount
 		ForksSum: sum}
 }
 
-func GetLatestProjectJSONHandler(w http.ResponseWriter, r *http.Request) {
-	repo, lastCount := preProcessRequest(r)
-	jsonData, err := json.Marshal(GetLatestProject(r.Context(), repo, lastCount))
-	if err != nil {
-		log.Fatal(err)
-	}
+func GetLatestProjectJSONHandler(repo repository.Repository) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		lastCount := preProcessRequest(r)
+		jsonData, err := json.Marshal(GetLatestProject(r.Context(), repo, lastCount))
+		if err != nil {
+			log.Fatal(err)
+		}
 
-	w.Write(jsonData)
+		w.Write(jsonData)
+	}
 }
 
-func preProcessRequest(r *http.Request) (repository.Repository, int) {
+func preProcessRequest(r *http.Request) int {
 	n := r.URL.Query().Get("n")
 
 	lastCount, err := strconv.Atoi(n)
@@ -60,7 +62,14 @@ func preProcessRequest(r *http.Request) (repository.Repository, int) {
 		lastCount = maxCount
 	}
 
-	repo := repository.NewInMemoryRepository()
+	return lastCount
+}
 
-	return repo, lastCount
+func NewService(addr string) *http.Server {
+	http.HandleFunc("/", GetLatestProjectJSONHandler(repository.NewGitlabRepository("https://gitlab.com/api/graphql")))
+
+	return &http.Server{
+		Addr:    addr,
+		Handler: nil,
+	}
 }

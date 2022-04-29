@@ -32,7 +32,7 @@ func TestServiceCore(t *testing.T) {
 
 func TestServiceHandler(t *testing.T) {
 	var server http.HandlerFunc
-	server = service.GetLatestProjectJSONHandler
+	server = service.GetLatestProjectJSONHandler(repository.NewInMemoryRepository())
 
 	tests := []struct {
 		name        string
