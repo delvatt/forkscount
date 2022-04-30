@@ -3,8 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
+	"os"
 
 	"github.com/machinebox/graphql"
+	"golang.org/x/oauth2"
 )
 
 type Project struct {
@@ -94,7 +98,17 @@ func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error)
 	request := graphql.NewRequest(query)
 	request.Var("n", n)
 
-	client := graphql.NewClient(gr.apiEndpoint)
+	httpClient := http.DefaultClient
+
+	if graphqlToken := os.Getenv("FORKSCOUNT_GRAPHQL_TOKEN"); graphqlToken != "" {
+		src := oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: graphqlToken},
+		)
+
+		httpClient = oauth2.NewClient(ctx, src)
+	}
+
+	client := graphql.NewClient(gr.apiEndpoint, graphql.WithHTTPClient(httpClient))
 
 	var resp response
 	if err := client.Run(ctx, request, &resp); err != nil {
@@ -107,4 +121,11 @@ func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error)
 	}
 
 	return latestProjects, nil
+}
+
+func init() {
+	if grapqlToken := os.Getenv("FORKSCOUNT_GRAPHQL_TOKEN"); grapqlToken == "" {
+		log.Printf("missing %q env var for authenticated graphql queries\n", "FORKSCOUNT_GRAPHQL_TOKEN")
+		log.Printf("you can configure your authentication token by setting %q env var\n", "FORKSCOUNT_GRAPHQL_TOKEN")
+	}
 }

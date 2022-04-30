@@ -56,9 +56,7 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 }
 
 func init() {
-
-	serviceAddr := os.Getenv("FORKSCOUNT_SERVICE_ADDR")
-	if serviceAddr == "" {
+	if serviceAddr := os.Getenv("FORKSCOUNT_SERVICE_ADDR"); serviceAddr == "" {
 		log.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
 		log.Printf("you can configure this by setting %q env var\n", "FORKSCOUNT_SERVICE_ADDR")
 		os.Setenv("FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)

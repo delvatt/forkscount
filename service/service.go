@@ -78,8 +78,7 @@ func NewService(addr string) *http.Server {
 }
 
 func init() {
-	graphqlAddr := os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR")
-	if graphqlAddr == "" {
+	if graphqlAddr := os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR"); graphqlAddr == "" {
 		log.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
 		log.Printf("please consider setting %q env var\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR")
 		os.Setenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
