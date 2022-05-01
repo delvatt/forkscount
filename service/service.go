@@ -18,6 +18,8 @@ const maxCount = 100
 
 const gitlabGraphqlEndpoint = "https://gitlab.com/api/graphql"
 
+var serviceLogger = log.New(os.Stdout, "[SERVICE]:", log.LstdFlags)
+
 type ApiResponse struct {
 	Names    string `json:"names"`
 	ForksSum int    `json:"forksSum"`
@@ -47,7 +49,7 @@ func GetLatestProjectJSONHandler(repo repository.Repository) func(w http.Respons
 
 		data, err := GetLatestProject(r.Context(), repo, lastCount)
 		if err != nil {
-			log.Printf("failed to fetch data from repository: %v", err)
+			logMsg("failed to fetch data from repository: %v", err)
 			switch {
 			case errors.Is(err, context.DeadlineExceeded):
 				http.Error(w, err.Error(), http.StatusRequestTimeout)
@@ -59,7 +61,7 @@ func GetLatestProjectJSONHandler(repo repository.Repository) func(w http.Respons
 
 		jsonData, err := json.Marshal(data)
 		if err != nil {
-			log.Printf("failed to marshal repository data into json: %v", err)
+			logMsg("failed to marshal repository data into json: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -75,7 +77,7 @@ func getLastCount(r *http.Request) int {
 	if n != "" {
 		val, err := strconv.Atoi(n)
 		if err != nil || val < 0 {
-			log.Printf("invalid lastCount parameter %q, falling back to default value %d\n", n, defaultCount)
+			logMsg("invalid lastCount parameter %q, falling back to default value %d\n", n, defaultCount)
 		} else {
 			lastCount = val
 		}
@@ -89,7 +91,19 @@ func getLastCount(r *http.Request) int {
 }
 
 func NewService(addr string) *http.Server {
-	http.HandleFunc("/", GetLatestProjectJSONHandler(repository.NewGitlabRepository(os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR"))))
+	if os.Getenv("FORKSCOUNT_GRAPHQL_TOKEN") == "" {
+		logMsg("missing %q env var for authenticated graphql queries\n", "FORKSCOUNT_GRAPHQL_TOKEN")
+		logMsg("you can configure your authentication token for the remote graphql repository by setting %q env var\n", "FORKSCOUNT_GRAPHQL_TOKEN")
+	}
+
+	var graphqlAddr string
+	if graphqlAddr = os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR"); graphqlAddr == "" {
+		logMsg("missing %q env var, defaulting to %q\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
+		logMsg("please consider setting %q env var\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR")
+		graphqlAddr = gitlabGraphqlEndpoint
+	}
+
+	http.HandleFunc("/", GetLatestProjectJSONHandler(repository.NewGitlabRepository(graphqlAddr)))
 
 	return &http.Server{
 		Addr:    addr,
@@ -97,10 +111,21 @@ func NewService(addr string) *http.Server {
 	}
 }
 
-func init() {
-	if graphqlAddr := os.Getenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR"); graphqlAddr == "" {
-		log.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
-		log.Printf("please consider setting %q env var\n", "FORKSCOUNT_GRAPHQL_SERVER_ADDR")
-		os.Setenv("FORKSCOUNT_GRAPHQL_SERVER_ADDR", gitlabGraphqlEndpoint)
+func logMsg(format string, v ...any) {
+	logSuffix := os.Getenv("FORKSCOUNT_LOGGING_ENABLED")
+
+	if logSuffix != "" {
+		logTarget, err := os.OpenFile(logSuffix, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			serviceLogger.Printf("fail to create service log file: %v", err)
+			return
+		}
+		defer logTarget.Close()
+
+		w := serviceLogger.Writer()
+
+		serviceLogger.SetOutput(logTarget)
+		defer serviceLogger.SetOutput(w)
 	}
+	serviceLogger.Printf(format, v...)
 }

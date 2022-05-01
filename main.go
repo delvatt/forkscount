@@ -53,14 +53,6 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	return indentJSONResponse(data)
 }
 
-func init() {
-	if serviceAddr := os.Getenv("FORKSCOUNT_SERVICE_ADDR"); serviceAddr == "" {
-		log.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
-		log.Printf("you can configure this by setting %q env var\n", "FORKSCOUNT_SERVICE_ADDR")
-		os.Setenv("FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
-	}
-}
-
 func indentJSONResponse(data []byte) (*bytes.Buffer, error) {
 	indentData := &bytes.Buffer{}
 	err := json.Indent(indentData, data, "", "  ")
@@ -73,19 +65,45 @@ func indentJSONResponse(data []byte) (*bytes.Buffer, error) {
 
 func main() {
 	lastCount := flag.Int("n", 5, "Number of repository projects to fetch.")
-	timeout := flag.Int("t", 0, "time (in the 100 Milliseconds) to wait before the request times out.")
+	timeout := flag.Int("t", 0, "Time (in the 100 Milliseconds) to wait before the request times out. (default to no timeout)")
+	logSuffix := flag.String("l", "", "Suffix name for logging files. (default stdout)")
 	flag.Parse()
 
-	service := service.NewService(os.Getenv("FORKSCOUNT_SERVICE_ADDR"))
+	var logTarget = os.Stdout
+	var err error
+
+	if *logSuffix != "" {
+		if os.Getenv("FORKSCOUNT_LOGGING_ENABLED") == "" {
+			os.Setenv("FORKSCOUNT_LOGGING_ENABLED", *logSuffix)
+		}
+
+		logTarget, err = os.OpenFile(*logSuffix, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+		if err != nil {
+			fmt.Fprint(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer logTarget.Close()
+	}
+
+	mainLogger := log.New(logTarget, "[MAIN]:", log.LstdFlags)
+
+	var serviceAddr string
+	if serviceAddr = os.Getenv("FORKSCOUNT_SERVICE_ADDR"); serviceAddr == "" {
+		mainLogger.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
+		mainLogger.Printf("you can configure this by setting %q env var\n", "FORKSCOUNT_SERVICE_ADDR")
+		serviceAddr = defaultServiceAddr
+	}
+
+	service := service.NewService(serviceAddr)
 
 	go func() {
-		log.Printf("starting service on %s\n", service.Addr)
-		log.Printf("attempting to stop service: %v", service.ListenAndServe())
+		mainLogger.Printf("starting service on %s\n", service.Addr)
+		mainLogger.Printf("attempting to stop service: %v", service.ListenAndServe())
 	}()
 	defer func() {
 		err := service.Shutdown(context.Background())
 		if err == nil {
-			log.Println("service successfully shutdown")
+			mainLogger.Println("service successfully shutdown")
 		}
 	}()
 
@@ -93,7 +111,7 @@ func main() {
 	if err == nil {
 		fmt.Fprintln(os.Stdout, results)
 	} else {
-		log.Printf("an error occurred while performing the request: %v\n", err)
-		fmt.Fprintln(os.Stdout, "error while performing the request. See logs for more details")
+		mainLogger.Printf("an error occurred while performing the request: %v\n", err)
+		fmt.Fprintln(os.Stderr, "error while performing the request. See logs for more details")
 	}
 }

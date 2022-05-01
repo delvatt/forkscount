@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 
@@ -60,7 +59,7 @@ func (ir *inMemoryRepository) Fetch(ctx context.Context, n int) ([]Project, erro
 
 	select {
 	case <-ctx.Done():
-		err = fmt.Errorf("repository fetch error: %w", ctx.Err())
+		err = fmt.Errorf("repository fetch aborted: %w", ctx.Err())
 	case latestProjects = <-repoChan:
 	}
 
@@ -121,11 +120,4 @@ func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error)
 	}
 
 	return latestProjects, nil
-}
-
-func init() {
-	if grapqlToken := os.Getenv("FORKSCOUNT_GRAPHQL_TOKEN"); grapqlToken == "" {
-		log.Printf("missing %q env var for authenticated graphql queries\n", "FORKSCOUNT_GRAPHQL_TOKEN")
-		log.Printf("you can configure your authentication token by setting %q env var\n", "FORKSCOUNT_GRAPHQL_TOKEN")
-	}
 }
