@@ -10,16 +10,18 @@ import (
 	"github.com/delvatt/forkscount/service"
 )
 
-var fakeProjects = []repository.Project{
-	{Name: "hcs_utils", ForksCount: 1},
-	{Name: "K", ForksCount: 1},
-	{Name: "Heroes of Wesnoth", ForksCount: 5},
-	{Name: "Leiningen", ForksCount: 1},
-	{Name: "TearDownWalls", ForksCount: 5},
-}
-
 func TestServiceCore(t *testing.T) {
-	want := service.ApiResponse{
+	t.Parallel()
+
+	var fakeProjects = []repository.Project{
+		{Name: "hcs_utils", ForksCount: 1},
+		{Name: "K", ForksCount: 1},
+		{Name: "Heroes of Wesnoth", ForksCount: 5},
+		{Name: "Leiningen", ForksCount: 1},
+		{Name: "TearDownWalls", ForksCount: 5},
+	}
+
+	want := service.APIResponse{
 		Names:    "hcs_utils,K,Heroes of Wesnoth,Leiningen,TearDownWalls",
 		ForksSum: 13,
 	}
@@ -35,6 +37,8 @@ func TestServiceCore(t *testing.T) {
 }
 
 func TestServiceHandler(t *testing.T) {
+	t.Parallel()
+
 	var server http.HandlerFunc
 	server = service.GetLatestProjectJSONHandler(repository.NewInMemoryRepository())
 
@@ -55,6 +59,7 @@ func TestServiceHandler(t *testing.T) {
 				q := req.URL.Query()
 				q.Add("n", "10")
 				req.URL.RawQuery = q.Encode()
+
 				return req
 			}(),
 			expected: `{"names":"Boner project,grup,easy,slothbeast,sspssptest,hcs_utils,K,Heroes of Wesnoth,Leiningen,TearDownWalls","forksSum":19}`,
@@ -62,7 +67,9 @@ func TestServiceHandler(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 
 			fakeResponse := httptest.NewRecorder()
 			server.ServeHTTP(fakeResponse, test.fakeRequest)

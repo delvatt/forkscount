@@ -10,20 +10,22 @@ import (
 	"github.com/delvatt/forkscount/repository"
 )
 
-var fakeProjects = []repository.Project{
-	{Name: "Boner project", ForksCount: 0},
-	{Name: "grup", ForksCount: 0},
-	{Name: "easy", ForksCount: 2},
-	{Name: "slothbeast", ForksCount: 4},
-	{Name: "sspssptest", ForksCount: 0},
-	{Name: "hcs_utils", ForksCount: 1},
-	{Name: "K", ForksCount: 1},
-	{Name: "Heroes of Wesnoth", ForksCount: 5},
-	{Name: "Leiningen", ForksCount: 1},
-	{Name: "TearDownWalls", ForksCount: 5},
-}
-
 func TestFetch(t *testing.T) {
+	t.Parallel()
+
+	var fakeProjects = []repository.Project{
+		{Name: "Boner project", ForksCount: 0},
+		{Name: "grup", ForksCount: 0},
+		{Name: "easy", ForksCount: 2},
+		{Name: "slothbeast", ForksCount: 4},
+		{Name: "sspssptest", ForksCount: 0},
+		{Name: "hcs_utils", ForksCount: 1},
+		{Name: "K", ForksCount: 1},
+		{Name: "Heroes of Wesnoth", ForksCount: 5},
+		{Name: "Leiningen", ForksCount: 1},
+		{Name: "TearDownWalls", ForksCount: 5},
+	}
+
 	repo := repository.NewInMemoryRepository()
 
 	projects, err := repo.Fetch(context.Background(), 100)
@@ -37,6 +39,21 @@ func TestFetch(t *testing.T) {
 }
 
 func TestFetchWithLimit(t *testing.T) {
+	t.Parallel()
+
+	var fakeProjects = []repository.Project{
+		{Name: "Boner project", ForksCount: 0},
+		{Name: "grup", ForksCount: 0},
+		{Name: "easy", ForksCount: 2},
+		{Name: "slothbeast", ForksCount: 4},
+		{Name: "sspssptest", ForksCount: 0},
+		{Name: "hcs_utils", ForksCount: 1},
+		{Name: "K", ForksCount: 1},
+		{Name: "Heroes of Wesnoth", ForksCount: 5},
+		{Name: "Leiningen", ForksCount: 1},
+		{Name: "TearDownWalls", ForksCount: 5},
+	}
+
 	repo := repository.NewInMemoryRepository()
 	want := fakeProjects[:5]
 
@@ -51,6 +68,8 @@ func TestFetchWithLimit(t *testing.T) {
 }
 
 func TestFetchWithTimeout(t *testing.T) {
+	t.Parallel()
+
 	repo := repository.NewInMemoryRepository()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Nanosecond)

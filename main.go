@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -16,6 +17,10 @@ import (
 )
 
 const defaultServiceAddr = "localhost:9000"
+const defaultLatCount = 5
+const timeoutMultipler = 100
+
+var errHTTPStatusNotOK = errors.New("unexpected http status")
 
 func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -28,13 +33,15 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	req.URL.RawQuery = q.Encode()
 
 	if timeout > 0 {
-		ctx, cancel := context.WithTimeout(req.Context(), time.Duration(timeout*100)*time.Millisecond)
+		ctx, cancel := context.WithTimeout(req.Context(),
+			time.Duration(timeout*timeoutMultipler)*time.Millisecond)
 		defer cancel()
 
 		req = req.WithContext(ctx)
 	}
 
 	client := http.DefaultClient
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http client error: %w", err)
@@ -42,7 +49,7 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("remote server http status: %s", resp.Status)
+		return nil, fmt.Errorf("%w: %s", errHTTPStatusNotOK, resp.Status)
 	}
 
 	data, err := io.ReadAll(resp.Body)
@@ -55,21 +62,25 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 
 func indentJSONResponse(data []byte) (*bytes.Buffer, error) {
 	indentData := &bytes.Buffer{}
+
 	err := json.Indent(indentData, data, "", "  ")
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("fail to indent JSON response: %w", err)
 	}
 
 	return indentData, nil
 }
 
 func main() {
-	lastCount := flag.Int("n", 5, "Number of repository projects to fetch.")
-	timeout := flag.Int("t", 0, "Time (in the 100 Milliseconds) to wait before the request times out. (default to no timeout)")
+	lastCount := flag.Int("n", defaultLatCount, "Number of repository projects to fetch.")
+	timeout := flag.Int("t", 0,
+		"Time (in the 100 Milliseconds) to wait before the request times out. (default to no timeout)")
+
 	logSuffix := flag.String("l", "", "Suffix name for logging files. (default stdout)")
 	flag.Parse()
 
 	var logTarget = os.Stdout
+
 	var err error
 
 	if *logSuffix != "" {
@@ -89,8 +100,12 @@ func main() {
 
 	var serviceAddr string
 	if serviceAddr = os.Getenv("FORKSCOUNT_SERVICE_ADDR"); serviceAddr == "" {
-		mainLogger.Printf("missing %q env var, defaulting to %q\n", "FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
-		mainLogger.Printf("you can configure this by setting %q env var\n", "FORKSCOUNT_SERVICE_ADDR")
+		mainLogger.Printf("missing %q env var, defaulting to %q\n",
+			"FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
+
+		mainLogger.Printf("you can configure this by setting %q env var\n",
+			"FORKSCOUNT_SERVICE_ADDR")
+
 		serviceAddr = defaultServiceAddr
 	}
 
@@ -100,6 +115,7 @@ func main() {
 		mainLogger.Printf("starting service on %s\n", service.Addr)
 		mainLogger.Printf("attempting to stop service: %v", service.ListenAndServe())
 	}()
+
 	defer func() {
 		err := service.Shutdown(context.Background())
 		if err == nil {

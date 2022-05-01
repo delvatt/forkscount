@@ -43,18 +43,19 @@ func NewInMemoryRepository(projects ...Project) *inMemoryRepository {
 	return &inMemoryRepository{projects}
 }
 
-func (ir *inMemoryRepository) Fetch(ctx context.Context, n int) ([]Project, error) {
+func (ir *inMemoryRepository) Fetch(ctx context.Context, count int) ([]Project, error) {
 	repoChan := make(chan []Project)
 
 	go func() {
-		if n > len(ir.fakeProjects) {
-			n = len(ir.fakeProjects)
+		if count > len(ir.fakeProjects) {
+			count = len(ir.fakeProjects)
 		}
 
-		repoChan <- ir.fakeProjects[:n]
+		repoChan <- ir.fakeProjects[:count]
 	}()
 
 	var err error
+
 	latestProjects := []Project{}
 
 	select {
@@ -74,7 +75,7 @@ func NewGitlabRepository(endPoint string) *gitlabRepository {
 	return &gitlabRepository{apiEndpoint: endPoint}
 }
 
-func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error) {
+func (gr *gitlabRepository) Fetch(ctx context.Context, count int) ([]Project, error) {
 	type projects struct {
 		Nodes []Project `json:"nodes"`
 	}
@@ -95,7 +96,7 @@ func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error)
 	}
 	`
 	request := graphql.NewRequest(query)
-	request.Var("n", n)
+	request.Var("n", count)
 
 	httpClient := http.DefaultClient
 
