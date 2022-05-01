@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -22,10 +23,10 @@ type ApiResponse struct {
 	ForksSum int    `json:"forksSum"`
 }
 
-func GetLatestProject(ctx context.Context, repo repository.Repository, lastCount int) ApiResponse {
+func GetLatestProject(ctx context.Context, repo repository.Repository, lastCount int) (ApiResponse, error) {
 	projects, err := repo.Fetch(ctx, lastCount)
 	if err != nil {
-		log.Fatal(err)
+		return ApiResponse{}, err
 	}
 
 	var sum int
@@ -37,28 +38,47 @@ func GetLatestProject(ctx context.Context, repo repository.Repository, lastCount
 
 	return ApiResponse{
 		Names:    strings.Join(names, ","),
-		ForksSum: sum}
+		ForksSum: sum}, nil
 }
 
 func GetLatestProjectJSONHandler(repo repository.Repository) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		lastCount := preProcessRequest(r)
-		jsonData, err := json.Marshal(GetLatestProject(r.Context(), repo, lastCount))
+		lastCount := getLastCount(r)
+
+		data, err := GetLatestProject(r.Context(), repo, lastCount)
 		if err != nil {
-			log.Fatal(err)
+			log.Printf("failed to fetch data from repository: %v", err)
+			switch {
+			case errors.Is(err, context.DeadlineExceeded):
+				http.Error(w, err.Error(), http.StatusRequestTimeout)
+			default:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
+			return
+		}
+
+		jsonData, err := json.Marshal(data)
+		if err != nil {
+			log.Printf("failed to marshal repository data into json: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		w.Write(jsonData)
 	}
 }
 
-func preProcessRequest(r *http.Request) int {
+func getLastCount(r *http.Request) int {
+	var lastCount = defaultCount
 	n := r.URL.Query().Get("n")
 
-	lastCount, err := strconv.Atoi(n)
-	if err != nil || lastCount < 0 {
-		// log that we are falling back on the default value
-		lastCount = defaultCount
+	if n != "" {
+		val, err := strconv.Atoi(n)
+		if err != nil || val < 0 {
+			log.Printf("invalid lastCount parameter %q, falling back to default value %d\n", n, defaultCount)
+		} else {
+			lastCount = val
+		}
 	}
 
 	if lastCount > maxCount {

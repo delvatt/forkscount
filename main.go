@@ -20,7 +20,7 @@ const defaultServiceAddr = "localhost:9000"
 func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid http request: %w", err)
 	}
 
 	q := req.URL.Query()
@@ -37,22 +37,20 @@ func run(url string, lastCount, timeout int) (*bytes.Buffer, error) {
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("http client error: %w", err)
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("remote server http status: %s", resp.Status)
+	}
+
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("invalid response body: %w", err)
 	}
 
-	indentData := &bytes.Buffer{}
-	err = json.Indent(indentData, data, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-
-	return indentData, nil
+	return indentJSONResponse(data)
 }
 
 func init() {
@@ -61,6 +59,16 @@ func init() {
 		log.Printf("you can configure this by setting %q env var\n", "FORKSCOUNT_SERVICE_ADDR")
 		os.Setenv("FORKSCOUNT_SERVICE_ADDR", defaultServiceAddr)
 	}
+}
+
+func indentJSONResponse(data []byte) (*bytes.Buffer, error) {
+	indentData := &bytes.Buffer{}
+	err := json.Indent(indentData, data, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+
+	return indentData, nil
 }
 
 func main() {
@@ -72,7 +80,7 @@ func main() {
 
 	go func() {
 		log.Printf("starting service on %s\n", service.Addr)
-		log.Println(service.ListenAndServe())
+		log.Printf("attempting to stop service: %v", service.ListenAndServe())
 	}()
 	defer func() {
 		err := service.Shutdown(context.Background())
@@ -82,9 +90,10 @@ func main() {
 	}()
 
 	results, err := run(fmt.Sprintf("http://%s", service.Addr), *lastCount, *timeout)
-	if err != nil {
-		log.Println(err)
+	if err == nil {
+		fmt.Fprintln(os.Stdout, results)
+	} else {
+		log.Printf("an error occurred while performing the request: %v\n", err)
+		fmt.Fprintln(os.Stdout, "error while performing the request. See logs for more details")
 	}
-
-	fmt.Fprintln(os.Stdout, results)
 }

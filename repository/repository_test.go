@@ -2,6 +2,7 @@ package repository_test
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 	"time"
@@ -56,7 +57,7 @@ func TestFetchWithTimeout(t *testing.T) {
 	defer cancel()
 
 	_, err := repo.Fetch(ctx, 5)
-	if err != context.DeadlineExceeded {
+	if !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("expected %v, but got %v", context.DeadlineExceeded, err)
 	}
 }

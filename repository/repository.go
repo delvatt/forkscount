@@ -60,7 +60,7 @@ func (ir *inMemoryRepository) Fetch(ctx context.Context, n int) ([]Project, erro
 
 	select {
 	case <-ctx.Done():
-		err = ctx.Err()
+		err = fmt.Errorf("repository fetch error: %w", ctx.Err())
 	case latestProjects = <-repoChan:
 	}
 
@@ -112,7 +112,7 @@ func (gr *gitlabRepository) Fetch(ctx context.Context, n int) ([]Project, error)
 
 	var resp response
 	if err := client.Run(ctx, request, &resp); err != nil {
-		return nil, fmt.Errorf("graphql client error: %w", err)
+		return nil, fmt.Errorf("repository fetch error: %w", err)
 	}
 
 	var latestProjects []Project

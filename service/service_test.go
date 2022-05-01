@@ -23,7 +23,11 @@ func TestServiceCore(t *testing.T) {
 		Names:    "hcs_utils,K,Heroes of Wesnoth,Leiningen,TearDownWalls",
 		ForksSum: 13,
 	}
-	got := service.GetLatestProject(context.Background(), repository.NewInMemoryRepository(fakeProjects...), 5)
+	got, err := service.GetLatestProject(context.Background(), repository.NewInMemoryRepository(fakeProjects...), 5)
+
+	if err != nil {
+		t.Error("expected no error, but got one")
+	}
 
 	if want != got {
 		t.Errorf("expected %v, but got %v", want, got)
